@@ -1,0 +1,8 @@
+pandas>=2.2.0
+numpy>=1.26.0
+scikit-learn>=1.4.0
+prophet>=1.1.5
+matplotlib>=3.8.0
+seaborn>=0.13.0
+jupyterlab>=4.1.0
+notebook>=7.1.0
