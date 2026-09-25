@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { X, Send, CheckCircle, Radio } from 'lucide-react';
 import { logEvent } from '../api/client';
 
-export default function EventModal({ isOpen, onClose, entityId }) {
+export default function EventModal({ isOpen, onClose, entityId, onEventEmitted, selectedDate }) {
   const [eventType, setEventType] = useState('booking');
   const [leadTimeDays, setLeadTimeDays] = useState(14);
+  const [travelDate, setTravelDate] = useState(selectedDate || '2026-10-15');
   const [statusMsg, setStatusMsg] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -15,16 +16,39 @@ export default function EventModal({ isOpen, onClose, entityId }) {
     setLoading(true);
     setStatusMsg(null);
     try {
+      const now = new Date().toISOString();
       const res = await logEvent(
         entityId,
         eventType,
-        new Date().toISOString(),
-        parseInt(leadTimeDays, 10)
+        now,
+        parseInt(leadTimeDays, 10),
+        travelDate
       );
       setStatusMsg({ type: 'success', text: `Event successfully emitted (Status: ${res.status || 'logged'})` });
+      if (onEventEmitted) {
+        onEventEmitted({
+          type: eventType,
+          entity_id: entityId,
+          lead_time_days: parseInt(leadTimeDays, 10),
+          timestamp: now,
+        });
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1000);
     } catch (err) {
-      // Graceful local log if backend is offline
-      setStatusMsg({ type: 'info', text: `Telemetry logged locally (Mock contract verified: ${eventType})` });
+      setStatusMsg({ type: 'info', text: `Telemetry logged locally: ${eventType}` });
+      if (onEventEmitted) {
+        onEventEmitted({
+          type: eventType,
+          entity_id: entityId,
+          lead_time_days: parseInt(leadTimeDays, 10),
+          timestamp: new Date().toISOString(),
+        });
+      }
+      setTimeout(() => {
+        onClose();
+      }, 1000);
     } finally {
       setLoading(false);
     }
@@ -74,6 +98,16 @@ export default function EventModal({ isOpen, onClose, entityId }) {
               <option value="cancellation">cancellation (Cancelled Booking)</option>
               <option value="abandon">abandon (Funnel Drop)</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-slate-300 font-medium mb-1">Target Travel Date:</label>
+            <input
+              type="date"
+              value={travelDate}
+              onChange={(e) => setTravelDate(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-teal-500"
+            />
           </div>
 
           <div>

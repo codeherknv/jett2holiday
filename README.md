@@ -1,10 +1,25 @@
 # Jett 2 Holiday — Real-Time Dynamic Pricing & Demand Forecasting (APS-02)
 
-**Jett 2 Holiday** is an intelligent dynamic pricing and demand forecasting platform designed for the travel and tourism industry (hotels + flights). It decouples statistical forecasting (Prophet / Regression) from deterministic, explainable rule engines with strict floor and ceiling guardrails.
+**Jett 2 Holiday** is an intelligent dynamic pricing and demand forecasting platform designed for the travel and tourism industry (hotels + flights). It decouples statistical time-series forecasting (Ridge Regression with Exponential Recency & Lead-time Decay) from a deterministic, explainable rule engine with strict floor, ceiling, and volatility guardrails.
 
 ---
 
-## 🏛 Repository Structure
+## ✦ Mandatory Enhancement: Guardrail Clamp Report
+
+Every price published by the engine records whether the raw model price was accepted or clamped, and by which named guardrail (`floor`, `ceiling`, or `max_daily_movement`).
+
+* **Live Running Count Banner**: Displays dynamic breach stats (`"14 of 30 prices clamped — 9 by ceiling, 3 by floor, 2 by daily-movement"`).
+* **Distinct Curve Markers**: Visual warning badges on the 30-day price curve indicating clamped dates.
+* **Clamped Point Inspector Modal**: Clicking any clamped point opens a detailed audit comparison displaying:
+  * **Raw Model Price** (unbounded ML proposal)
+  * **Published Dynamic Price** (safe deployable rate)
+  * **Binding Guardrail Name & Value** (e.g., `Ceiling Guardrail ₹6,131`)
+  * **Decomposed Factor Contributions** (Demand signal, Occupancy, Lead-time, Seasonality)
+* **Admin Manual Price Overrides**: Allows revenue managers to apply custom override prices with real-time guardrail breach validation.
+
+---
+
+## 🏛 Architecture & Project Structure
 
 ```
 jett2holiday/
