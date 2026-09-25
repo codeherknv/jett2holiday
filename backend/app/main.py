@@ -469,6 +469,7 @@ def get_forecaster_metrics():
 )
 def get_forecast_horizon(
     entity_id: str = Query(..., examples=["rmt_ca391f47"], description="Entity identifier"),
+    start_date: Optional[str] = Query(None, description="Start date for 30-day forecast horizon (YYYY-MM-DD)"),
     db: sqlite3.Connection = Depends(get_db)
 ):
     """
@@ -477,7 +478,8 @@ def get_forecast_horizon(
     sim_data = pricing_engine.simulate_30day_curve(
         entity_id=entity_id,
         base_multiplier=1.0,
-        daily_move_limit=0.15
+        daily_move_limit=0.15,
+        start_date_str=start_date
     )
     return PricingSimulateResponse(
         simulated_price_curve=sim_data["simulated_price_curve"],
@@ -509,7 +511,8 @@ def simulate_pricing(
     sim_data = pricing_engine.simulate_30day_curve(
         entity_id=request.entity_id,
         base_multiplier=request.base_multiplier,
-        daily_move_limit=request.daily_move_limit
+        daily_move_limit=request.daily_move_limit,
+        start_date_str=request.start_date
     )
     return PricingSimulateResponse(
         simulated_price_curve=sim_data["simulated_price_curve"],

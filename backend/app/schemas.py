@@ -61,6 +61,7 @@ class PricingSimulateRequest(BaseModel):
     entity_id: str = Field(..., examples=["htl_sng_001_deluxe"], description="Entity identifier to simulate")
     base_multiplier: float = Field(..., ge=0.1, le=5.0, examples=[1.15], description="Multiplier scalar to test price sensitivity")
     daily_move_limit: float = Field(..., ge=0.01, le=1.0, examples=[0.20], description="Maximum permitted day-over-day price jump percentage (e.g. 0.20 for 20%)")
+    start_date: Optional[str] = Field(default=None, examples=["2026-10-15"], description="Optional start date for the 30-day simulation window")
 
 
 class SimulatedPricePoint(BaseModel):

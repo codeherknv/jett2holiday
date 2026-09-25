@@ -149,19 +149,22 @@ export async function explainPricing(entityId, date) {
   });
 }
 
-export async function simulatePricing(entityId, baseMultiplier, dailyMoveLimit) {
+export async function simulatePricing(entityId, baseMultiplier, dailyMoveLimit, startDate = null) {
   return fetchJSON('/pricing/simulate', {
     method: 'POST',
     body: JSON.stringify({
       entity_id: entityId,
       base_multiplier: parseFloat(baseMultiplier),
       daily_move_limit: parseFloat(dailyMoveLimit),
+      start_date: startDate || undefined,
     }),
   });
 }
 
-export async function fetchForecastHorizon(entityId) {
-  const query = new URLSearchParams({ entity_id: entityId }).toString();
+export async function fetchForecastHorizon(entityId, startDate = null) {
+  const params = { entity_id: entityId };
+  if (startDate) params.start_date = startDate;
+  const query = new URLSearchParams(params).toString();
   return fetchJSON(`/pricing/horizon?${query}`, { method: 'GET' });
 }
 

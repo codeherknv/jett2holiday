@@ -27,23 +27,25 @@ import {
 } from './api/client';
 
 
-// Generate default 30-day mock forecast curve with realistic clamp dynamics
-function generateDefaultForecast(baseMultiplier = 1.0) {
-  const startDate = new Date('2026-10-12');
+// Generate default 30-day forecast curve with dynamic entity bounds and date responsiveness
+function generateDefaultForecast(startDateStr = '2026-10-15', baseMultiplier = 1.0, entityMeta = null) {
+  const startDate = new Date(startDateStr || '2026-10-15');
   const items = [];
-  const baseFare = 3698;
-  const floorPrice = 2485;
-  const ceilingPrice = 6131;
+  const baseFare = entityMeta?.base_price || 3698;
+  const floorPrice = entityMeta?.floor_price || 2485;
+  const ceilingPrice = entityMeta?.ceiling_price || 6131;
 
   for (let i = 0; i < 30; i++) {
     const d = new Date(startDate);
     d.setDate(d.getDate() + i);
     const dateStr = d.toISOString().split('T')[0];
 
-    // Peak demand around Oct 15-22 (autumn festival rush)
-    const peakWave = Math.max(0, 1.0 - Math.abs(i - 6) / 8.0);
-    const demandIndex = Number((1.0 + 0.58 * peakWave).toFixed(2));
-    const rawCandidate = Math.round(baseFare * (1.0 + (demandIndex - 1.0) * 0.70) * baseMultiplier);
+    // Responsive Day of week cycle: weekend lift
+    const dow = d.getDay();
+    const dowMult = dow === 5 || dow === 6 ? 1.25 : (dow === 2 ? 0.90 : 1.0);
+    const leadFactor = 1.0 + 0.18 * Math.exp(-0.06 * i);
+    const demandIndex = Number(Math.max(0.7, Math.min(2.1, 1.0 + (dowMult - 1.0) * 0.7 + (leadFactor - 1.0) * 0.4)).toFixed(2));
+    const rawCandidate = Math.round(baseFare * (1.0 + (demandIndex - 1.0) * 0.75) * baseMultiplier);
     
     let clamped = false;
     let clampedBy = null;
@@ -54,13 +56,13 @@ function generateDefaultForecast(baseMultiplier = 1.0) {
     if (rawCandidate > ceilingPrice) {
       clamped = true;
       clampedBy = 'ceiling';
-      boundName = `Ceiling Guardrail (₹${ceilingPrice.toLocaleString('en-IN')})`;
+      boundName = `Ceiling Guardrail (₹${Math.round(ceilingPrice).toLocaleString('en-IN')})`;
       boundValue = ceilingPrice;
       effective = ceilingPrice;
     } else if (rawCandidate < floorPrice) {
       clamped = true;
       clampedBy = 'floor';
-      boundName = `Floor Guardrail (₹${floorPrice.toLocaleString('en-IN')})`;
+      boundName = `Floor Guardrail (₹${Math.round(floorPrice).toLocaleString('en-IN')})`;
       boundValue = floorPrice;
       effective = floorPrice;
     }
@@ -79,9 +81,9 @@ function generateDefaultForecast(baseMultiplier = 1.0) {
       bound_name: boundName,
       bound_value: boundValue,
       factors: [
-        { name: 'Demand Index (forecast)', value: demandIndex, contribution: Math.round((demandIndex - 1) * 40) / 100 },
-        { name: 'Occupancy Factor', value: 1.18, contribution: 0.18 },
-        { name: 'Seasonality Multiplier', value: 1.15, contribution: 0.15 }
+        { name: 'Demand Index (forecast)', value: demandIndex, contribution: Math.round((demandIndex - 1) * 35) / 100 },
+        { name: 'Occupancy Factor', value: 1.15, contribution: 0.15 },
+        { name: 'Seasonality Multiplier', value: 1.18, contribution: 0.18 }
       ]
     });
   }
@@ -166,7 +168,8 @@ export default function App() {
     booking_rate_delta_pct: -2.1,
     breaches: 4,
   });
-  const [forecastCurve, setForecastCurve] = useState(() => generateDefaultForecast(1.15));
+  const currentEntityMeta = entities.find((e) => e.entity_id === selectedEntity) || entities[0];
+  const [forecastCurve, setForecastCurve] = useState(() => generateDefaultForecast('2026-10-15', 1.15, entities[0]));
 
   // Live Telemetry Event Stream State
   const [recentEvents, setRecentEvents] = useState([
@@ -201,9 +204,6 @@ export default function App() {
       time: '4m ago',
     }
   ]);
-
-  // Current entity metadata
-  const currentEntityMeta = entities.find((e) => e.entity_id === selectedEntity) || entities[0];
 
   // 1. Initial Load & Backend Healthcheck
   useEffect(() => {
@@ -243,7 +243,7 @@ export default function App() {
       const [pData, eData, hData] = await Promise.all([
         calculatePricing(selectedEntity, selectedDate),
         explainPricing(selectedEntity, selectedDate),
-        fetchForecastHorizon(selectedEntity).catch(() => null)
+        fetchForecastHorizon(selectedEntity, selectedDate).catch(() => null)
       ]);
 
       setPricingData(pData);
@@ -263,8 +263,8 @@ export default function App() {
         handleLogout();
         return;
       }
-      // Fallback to local default curve
-      setForecastCurve(generateDefaultForecast(baseMultiplier));
+      // Fallback to local responsive curve using selected date and active entity bounds
+      setForecastCurve(generateDefaultForecast(selectedDate, baseMultiplier, currentEntityMeta));
     }
   };
 
@@ -281,7 +281,7 @@ export default function App() {
     const move = typeof moveOverride === 'number' ? moveOverride : dailyMoveLimit;
     setIsSimulating(true);
     try {
-      const res = await simulatePricing(selectedEntity, mult, move);
+      const res = await simulatePricing(selectedEntity, mult, move, selectedDate);
       setSimulationResults({
         revenue_delta_pct: res.revenue_delta_pct,
         booking_rate_delta_pct: res.booking_rate_delta_pct,
@@ -294,7 +294,7 @@ export default function App() {
       setIsLive(true);
     } catch (err) {
       console.warn("Simulation call fallback:", err);
-      const newCurve = generateDefaultForecast(mult);
+      const newCurve = generateDefaultForecast(selectedDate, mult, currentEntityMeta);
       setForecastCurve(newCurve);
       setSimulationResults({
         revenue_delta_pct: Number(((mult - 1.0) * 82.5).toFixed(1)),

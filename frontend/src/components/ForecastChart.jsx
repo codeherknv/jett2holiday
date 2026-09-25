@@ -120,7 +120,23 @@ export default function ForecastChart({
   const dailyClamps = forecastData.filter(d => d.clamped && d.clamped_by === 'daily_movement').length;
   const totalClamped = forecastData.filter(d => d.clamped).length;
 
-  const hasSimulationActive = showSimulation && forecastData.some(d => typeof d.simulated_price === 'number');
+  const allPrices = forecastData.flatMap(d => [
+    d.current_dynamic_price,
+    d.simulated_price,
+    d.floor_price || floorPrice,
+    d.ceiling_price || ceilingPrice
+  ]).filter(p => typeof p === 'number' && !isNaN(p) && p > 0);
+
+  const minPrice = allPrices.length ? Math.min(...allPrices) : (floorPrice || 2000);
+  const maxPrice = allPrices.length ? Math.max(...allPrices) : (ceilingPrice || 7000);
+  const yDomainMin = Math.max(0, Math.floor((minPrice * 0.85) / 100) * 100);
+  const yDomainMax = Math.ceil((maxPrice * 1.12) / 100) * 100;
+
+  const allDemands = forecastData.map(d => d.demand_index).filter(v => typeof v === 'number' && !isNaN(v));
+  const minDemand = allDemands.length ? Math.min(...allDemands) : 0.8;
+  const maxDemand = allDemands.length ? Math.max(...allDemands) : 2.0;
+  const demandDomainMin = Number(Math.max(0.2, (minDemand - 0.25)).toFixed(1));
+  const demandDomainMax = Number((maxDemand + 0.35).toFixed(1));
 
   // Custom dot renderer for Recharts
   const renderClampedDot = (props) => {
@@ -254,7 +270,11 @@ export default function ForecastChart({
 
       {/* Recharts Container */}
       <div className="w-full h-84">
-        <ResponsiveContainer width="100%" height={330}>
+        <ResponsiveContainer
+          width="100%"
+          height={330}
+          key={`${forecastData?.[0]?.date}_${forecastData?.length}_${floorPrice}_${ceilingPrice}_${showSimulation}`}
+        >
           <ComposedChart
             data={forecastData}
             margin={{ top: 10, right: 20, left: 10, bottom: 0 }}
@@ -273,12 +293,12 @@ export default function ForecastChart({
               fontSize={11}
               tickLine={false}
             />
-            {/* Left Y Axis: Currency (INR) */}
+            {/* Left Y Axis: Dynamic Currency (INR) Domain */}
             <YAxis
               yAxisId="price"
               stroke="#64748b"
               fontSize={11}
-              domain={[Math.round(floorPrice * 0.8), Math.round(ceilingPrice * 1.15)]}
+              domain={[yDomainMin, yDomainMax]}
               tickFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
               tickLine={false}
               orientation="left"
@@ -288,7 +308,7 @@ export default function ForecastChart({
               yAxisId="demand"
               stroke="#64748b"
               fontSize={11}
-              domain={[0.5, 2.5]}
+              domain={[demandDomainMin, demandDomainMax]}
               tickFormatter={(v) => `${v}x`}
               tickLine={false}
               orientation="right"
