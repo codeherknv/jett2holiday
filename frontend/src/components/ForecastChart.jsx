@@ -120,6 +120,8 @@ export default function ForecastChart({
   const dailyClamps = forecastData.filter(d => d.clamped && d.clamped_by === 'daily_movement').length;
   const totalClamped = forecastData.filter(d => d.clamped).length;
 
+  const hasSimulationActive = Boolean(showSimulation && forecastData.some(d => typeof d.simulated_price === 'number'));
+
   const allPrices = forecastData.flatMap(d => [
     d.current_dynamic_price,
     d.simulated_price,

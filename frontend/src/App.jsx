@@ -452,9 +452,9 @@ export default function App() {
           <>
             {/* KPI Metrics Row */}
             <MetricsRow
-              floorPrice={currentEntityMeta.floor_price || 2485.41}
-              ceilingPrice={currentEntityMeta.ceiling_price || 6130.68}
-              maxDailyMovePct={currentEntityMeta.max_daily_move_pct || 0.15}
+              floorPrice={currentEntityMeta?.floor_price || 2485.41}
+              ceilingPrice={currentEntityMeta?.ceiling_price || 6130.68}
+              maxDailyMovePct={currentEntityMeta?.max_daily_move_pct || 0.15}
               effectivePrice={pricingData.effective_price}
               basePrice={pricingData.base_price}
               boundClamped={pricingData.bound_clamped}
@@ -465,8 +465,8 @@ export default function App() {
             <ForecastChart
               forecastData={forecastCurve}
               showSimulation={hasSimulated}
-              floorPrice={currentEntityMeta.floor_price || 2485.41}
-              ceilingPrice={currentEntityMeta.ceiling_price || 6130.68}
+              floorPrice={currentEntityMeta?.floor_price || 2485.41}
+              ceilingPrice={currentEntityMeta?.ceiling_price || 6130.68}
               basePrice={pricingData.base_price || 3697.89}
               onInspectPoint={handleInspectPoint}
               onOpenOverrideModal={() => handleOpenOverride({ date: selectedDate })}
@@ -512,7 +512,7 @@ export default function App() {
         isOpen={isClampInspectorOpen}
         onClose={() => setIsClampInspectorOpen(false)}
         pointData={inspectedPointData}
-        entityName={currentEntityMeta.entity_name}
+        entityName={currentEntityMeta?.entity_name || 'Selected Entity'}
         locale={locale}
         onOpenOverride={(pt) => handleOpenOverride(pt)}
       />
@@ -522,10 +522,10 @@ export default function App() {
         isOpen={isOverrideModalOpen}
         onClose={() => setIsOverrideModalOpen(false)}
         selectedEntity={selectedEntity}
-        entityName={currentEntityMeta.entity_name}
+        entityName={currentEntityMeta?.entity_name || 'Selected Entity'}
         defaultDate={overrideDateTarget}
-        floorPrice={currentEntityMeta.floor_price || 2485.41}
-        ceilingPrice={currentEntityMeta.ceiling_price || 6130.68}
+        floorPrice={currentEntityMeta?.floor_price || 2485.41}
+        ceilingPrice={currentEntityMeta?.ceiling_price || 6130.68}
         currentPrice={pricingData.effective_price}
         onOverrideApplied={handleOverrideApplied}
       />
